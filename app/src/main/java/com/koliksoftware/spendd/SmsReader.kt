@@ -6,7 +6,7 @@ import android.net.Uri
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.Month
-import java.time.ZoneId
+import java.time.ZoneOffset
 
 class SmsReader {
     fun readAll(contentResolver: ContentResolver, year: Int, month: Month): List<Sms> {
@@ -34,10 +34,9 @@ class SmsReader {
         val id = cursor.getString(cursor.getColumnIndexOrThrow("_id"))
         val body = cursor.getString(cursor.getColumnIndexOrThrow("body"))
         val date = LocalDateTime.ofInstant(
-            Instant.ofEpochMilli(cursor.getLong(cursor.getColumnIndexOrThrow("date"))), ZoneId.systemDefault()
+            Instant.ofEpochMilli(cursor.getLong(cursor.getColumnIndexOrThrow("date"))),
+            ZoneOffset.UTC
         )
-
-//        Log.i("XXX", body)
 
         return Sms(id, body, date)
     }

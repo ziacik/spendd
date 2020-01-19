@@ -3,12 +3,12 @@ package com.koliksoftware.spendd
 import android.content.ContentResolver
 import android.database.Cursor
 import android.net.Uri
-import io.mockk.*
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.mockkStatic
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
-
 import org.junit.jupiter.api.Test
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Month
 import java.time.ZoneOffset
@@ -28,7 +28,7 @@ internal class SmsReaderTest {
         val inboxUri = mockk<Uri>()
         val inboxCursor = mockk<Cursor> {
             every { moveToFirst() } returns true
-            every { moveToNext() }.returnsMany(true, true, true, false)
+            every { moveToNext() }.returnsMany(true, true, false)
             every { getColumnIndexOrThrow("_id") } returns 0
             every { getColumnIndexOrThrow("body") } returns 1
             every { getColumnIndexOrThrow("date") } returns 2
@@ -42,7 +42,7 @@ internal class SmsReaderTest {
             every { close() } answers {}
         }
 
-        this.contentResolver = mockk() {
+        this.contentResolver = mockk {
             every {
                 query(inboxUri, null, null, null, null)
             } returns inboxCursor
@@ -55,9 +55,9 @@ internal class SmsReaderTest {
     }
 
     @Test
-    internal fun `reads all sms for the selected month, from selected sender`() {
+    internal fun `reads all sms for the selected month`() {
         val sms = this.smsReader.readAll(this.contentResolver, 2020, Month.FEBRUARY)
-//        assertThat(sms).hasSize(2)
+        assertThat(sms).hasSize(2)
         assertThat(sms[0]).isEqualTo(Sms("id-2", "Text B", timeB))
         assertThat(sms[1]).isEqualTo(Sms("id-3", "Text C", timeC))
     }
