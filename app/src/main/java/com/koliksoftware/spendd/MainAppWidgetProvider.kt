@@ -3,20 +3,24 @@ package com.koliksoftware.spendd
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.provider.Telephony
 import android.widget.RemoteViews
 import java.math.BigDecimal
 import java.time.Month
 
-
-class SpenddAppWidgetProvider : AppWidgetProvider() {
+class MainAppWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
 
         val sms = SmsReader().readAll(context.contentResolver, 2020, Month.JANUARY)
         val parser = SmsParser()
-        val amount = sms.fold(BigDecimal.ZERO) { acc, one -> parser.parse(one.text).plus(acc) }
+        val amount = sms
+            .map { parser.parse(it.text) }
+            .filter { it < BigDecimal.ZERO }
+            .fold(BigDecimal.ZERO) { acc, one -> one.plus(acc) }
 
         // Perform this loop procedure for each App Widget that belongs to this provider
         appWidgetIds.forEach { appWidgetId ->
@@ -34,6 +38,28 @@ class SpenddAppWidgetProvider : AppWidgetProvider() {
 
             // Tell the AppWidgetManager to perform an update on the current app widget
             appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (Telephony.Sms.Intents.SMS_RECEIVED_ACTION == intent.action) {
+//            for (smsMessage in Telephony.Sms.Intents.getMessagesFromIntent(intent)) {
+//                val parser = SmsParser()
+//                val amount = parser.parse(smsMessage.messageBody)
+//
+//                val views: RemoteViews = RemoteViews(context.packageName, R.layout.widget_layout).apply {
+////                    setOnClickPendingIntent(R.id.empty_view, intent)
+//                    setTextViewText(R.id.empty_view, amount.toPlainString())
+//                }
+
+            val appWidgetManager = AppWidgetManager.getInstance(context.applicationContext)
+            val thisWidget = ComponentName(context.applicationContext, MainAppWidgetProvider::class.java)
+            val appWidgetIds = appWidgetManager.getAppWidgetIds(thisWidget)
+            if (appWidgetIds != null && appWidgetIds.isNotEmpty()) {
+                onUpdate(context, appWidgetManager, appWidgetIds)
+            }
+//            }
         }
     }
 }
