@@ -9,6 +9,7 @@ import android.content.Intent
 import android.provider.Telephony
 import android.widget.RemoteViews
 import java.math.BigDecimal
+import java.time.LocalDate
 import java.time.Month
 
 class MainAppWidgetProvider : AppWidgetProvider() {
@@ -17,10 +18,13 @@ class MainAppWidgetProvider : AppWidgetProvider() {
 
         val sms = SmsReader().readAll(context.contentResolver, 2020, Month.JANUARY)
         val parser = SmsParser()
-        val amount = sms
-            .mapNotNull { parser.parse(it)?.amount }
-            .filter { it < BigDecimal.ZERO }
-            .fold(BigDecimal.ZERO) { acc, one -> one.plus(acc) }
+        val items = sms
+            .mapNotNull { parser.parse(it) }
+
+        val today = LocalDate.now()
+
+        val monthSpendings = items.filter { it.amount < BigDecimal.ZERO }.fold(BigDecimal.ZERO) { acc, one -> one.amount.plus(acc) }
+        val todaySpendings = items.filter { it.amount < BigDecimal.ZERO }.filter { it.doneAt.toLocalDate() == today }.fold(BigDecimal.ZERO) { acc, one -> one.amount.plus(acc) }
 
         // Perform this loop procedure for each App Widget that belongs to this provider
         appWidgetIds.forEach { appWidgetId ->
@@ -32,8 +36,9 @@ class MainAppWidgetProvider : AppWidgetProvider() {
             // Get the layout for the App Widget and attach an on-click listener
             // to the button
             val views: RemoteViews = RemoteViews(context.packageName, R.layout.widget_layout).apply {
-                setOnClickPendingIntent(R.id.empty_view, pendingIntent)
-                setTextViewText(R.id.empty_view, amount.toPlainString())
+                setOnClickPendingIntent(R.id.spendings_month, pendingIntent)
+                setTextViewText(R.id.spendings_month, monthSpendings.toPlainString())
+                setTextViewText(R.id.spendings_day, todaySpendings.toPlainString())
             }
 
             // Tell the AppWidgetManager to perform an update on the current app widget
