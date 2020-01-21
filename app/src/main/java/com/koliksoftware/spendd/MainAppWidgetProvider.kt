@@ -11,6 +11,9 @@ import android.widget.RemoteViews
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.Month
+import java.time.temporal.TemporalField
+import java.time.temporal.WeekFields
+import java.util.*
 
 class MainAppWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -22,9 +25,12 @@ class MainAppWidgetProvider : AppWidgetProvider() {
             .mapNotNull { parser.parse(it) }
 
         val today = LocalDate.now()
-
+        val weekOfYearField: TemporalField = WeekFields.of(Locale.getDefault()).weekOfWeekBasedYear()
         val monthSpendings = items.filter { it.amount < BigDecimal.ZERO }.fold(BigDecimal.ZERO) { acc, one -> one.amount.plus(acc) }
-        val todaySpendings = items.filter { it.amount < BigDecimal.ZERO }.filter { it.doneAt.toLocalDate() == today }.fold(BigDecimal.ZERO) { acc, one -> one.amount.plus(acc) }
+        val weekSpendings = items.filter { it.amount < BigDecimal.ZERO }.filter { it.doneAt.toLocalDate().get(weekOfYearField) == today.get(weekOfYearField) }
+            .fold(BigDecimal.ZERO) { acc, one -> one.amount.plus(acc) }
+        val daySpendings =
+            items.filter { it.amount < BigDecimal.ZERO }.filter { it.doneAt.toLocalDate() == today }.fold(BigDecimal.ZERO) { acc, one -> one.amount.plus(acc) }
 
         // Perform this loop procedure for each App Widget that belongs to this provider
         appWidgetIds.forEach { appWidgetId ->
@@ -38,7 +44,8 @@ class MainAppWidgetProvider : AppWidgetProvider() {
             val views: RemoteViews = RemoteViews(context.packageName, R.layout.widget_layout).apply {
                 setOnClickPendingIntent(R.id.spendings_month, pendingIntent)
                 setTextViewText(R.id.spendings_month, monthSpendings.toPlainString())
-                setTextViewText(R.id.spendings_day, todaySpendings.toPlainString())
+                setTextViewText(R.id.spendings_week, weekSpendings.toPlainString())
+                setTextViewText(R.id.spendings_day, daySpendings.toPlainString())
             }
 
             // Tell the AppWidgetManager to perform an update on the current app widget
